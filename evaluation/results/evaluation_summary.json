@@ -1,227 +1,277 @@
 {
-  "timestamp": "2026-10-23T16:27:13Z",
+  "timestamp": "2026-10-23T21:55:37Z",
+  "telemetry_source": "synthetic",
+  "provenance_badge": "SYNTHETIC LAB SIMULATION (Sysmon + Auditd)",
+  "overall_baseline_fpr": 0.0331,
   "experiment1_isolated_vs_window": [
     {
       "Mode": "Single Isolated Command",
       "Precision": "1.0000",
-      "Recall": "0.4694",
-      "F1-Score": "0.6389",
+      "Recall": "0.5102",
+      "F1-Score": "0.6757",
       "FPR": "0.0000",
-      "Latency/Ev (ms)": "0.087",
+      "Latency/Ev (ms)": "0.080",
       "_raw": {
-        "tp": 345,
+        "tp": 375,
         "fp": 0,
         "tn": 514,
-        "fn": 390,
+        "fn": 360,
         "precision": 1.0,
-        "recall": 0.46938775510204084,
-        "f1": 0.6388888888888888,
+        "recall": 0.5102040816326531,
+        "f1": 0.6756756756756758,
         "fpr": 0.0
       }
     },
     {
       "Mode": "Sliding Window (N=3)",
-      "Precision": "0.9735",
-      "Recall": "0.8980",
-      "F1-Score": "0.9342",
-      "FPR": "0.0350",
-      "Latency/Ev (ms)": "0.098",
+      "Precision": "0.9761",
+      "Recall": "0.9456",
+      "F1-Score": "0.9606",
+      "FPR": "0.0331",
+      "Latency/Ev (ms)": "0.111",
       "_raw": {
-        "tp": 660,
-        "fp": 18,
-        "tn": 496,
-        "fn": 75,
-        "precision": 0.9734513274336283,
-        "recall": 0.8979591836734694,
-        "f1": 0.9341825902335457,
-        "fpr": 0.03501945525291829
+        "tp": 695,
+        "fp": 17,
+        "tn": 497,
+        "fn": 40,
+        "precision": 0.976123595505618,
+        "recall": 0.9455782312925171,
+        "f1": 0.960608154803041,
+        "fpr": 0.033073929961089495
       }
+    }
+  ],
+  "experiment1b_window_size_ablation": [
+    {
+      "Window Size": "N = 3",
+      "Precision": "0.9761",
+      "Recall": "0.9456",
+      "F1-Score": "0.9606",
+      "FPR": "0.0331",
+      "Latency/Ev (ms)": "0.093",
+      "Operational Trade-off": "Optimal balance: lowest latency & high sensitivity"
+    },
+    {
+      "Window Size": "N = 4",
+      "Precision": "0.9772",
+      "Recall": "0.9347",
+      "F1-Score": "0.9555",
+      "FPR": "0.0311",
+      "Latency/Ev (ms)": "0.110",
+      "Operational Trade-off": "Extended chain context; slightly higher inertia"
+    },
+    {
+      "Window Size": "N = 5",
+      "Precision": "0.9758",
+      "Recall": "0.9333",
+      "F1-Score": "0.9541",
+      "FPR": "0.0331",
+      "Latency/Ev (ms)": "0.115",
+      "Operational Trade-off": "Deep multi-step context; maximal memory footprint"
     }
   ],
   "experiment2_tiers": [
     {
       "Attack Evaluation Tier": "Tier 1: Overt / Isolated GTFOBins & LOLBins",
       "Attack Events": 300,
-      "Benign Test": 514,
-      "Precision": "0.9434",
+      "Benign Test (Fold)": 171,
+      "Precision": "0.9901",
       "Recall": "1.0000",
-      "F1-Score": "0.9709",
-      "FPR": "0.0350",
+      "F1-Score": "0.9950",
+      "Tier FPR": "0.0175",
       "_raw": {
         "tp": 300,
-        "fp": 18,
-        "tn": 496,
+        "fp": 3,
+        "tn": 168,
         "fn": 0,
-        "precision": 0.9433962264150944,
+        "precision": 0.9900990099009901,
         "recall": 1.0,
-        "f1": 0.970873786407767,
-        "fpr": 0.03501945525291829
+        "f1": 0.9950248756218906,
+        "fpr": 0.017543859649122806
       }
     },
     {
       "Attack Evaluation Tier": "Tier 2: Multi-step Chained Sequences",
       "Attack Events": 285,
-      "Benign Test": 514,
-      "Precision": "0.9302",
-      "Recall": "0.8421",
-      "F1-Score": "0.8840",
-      "FPR": "0.0350",
+      "Benign Test (Fold)": 171,
+      "Precision": "0.9738",
+      "Recall": "0.9123",
+      "F1-Score": "0.9420",
+      "Tier FPR": "0.0409",
       "_raw": {
-        "tp": 240,
-        "fp": 18,
-        "tn": 496,
-        "fn": 45,
-        "precision": 0.9302325581395349,
-        "recall": 0.8421052631578947,
-        "f1": 0.8839779005524862,
-        "fpr": 0.03501945525291829
+        "tp": 260,
+        "fp": 7,
+        "tn": 164,
+        "fn": 25,
+        "precision": 0.9737827715355806,
+        "recall": 0.9122807017543859,
+        "f1": 0.9420289855072465,
+        "fpr": 0.04093567251461988
       }
     },
     {
       "Attack Evaluation Tier": "Tier 3: Obfuscated / Stealthy (Base64/Ticks/IFS/Aliasing)",
       "Attack Events": 150,
-      "Benign Test": 514,
-      "Precision": "0.8696",
-      "Recall": "0.8000",
-      "F1-Score": "0.8333",
-      "FPR": "0.0350",
+      "Benign Test (Fold)": 172,
+      "Precision": "0.9507",
+      "Recall": "0.9000",
+      "F1-Score": "0.9247",
+      "Tier FPR": "0.0407",
       "_raw": {
-        "tp": 120,
-        "fp": 18,
-        "tn": 496,
-        "fn": 30,
-        "precision": 0.8695652173913043,
-        "recall": 0.8,
-        "f1": 0.8333333333333333,
-        "fpr": 0.03501945525291829
+        "tp": 135,
+        "fp": 7,
+        "tn": 165,
+        "fn": 15,
+        "precision": 0.9507042253521126,
+        "recall": 0.9,
+        "f1": 0.9246575342465754,
+        "fpr": 0.040697674418604654
       }
     }
   ],
   "experiment2b_chained_sequence_highlight": [
     {
       "Evaluation Dimension": "Event-Level Recall",
-      "Observed Count": "240 / 285 Events",
-      "Detection Rate": "0.8421",
+      "Observed Metric": "260 / 285 Events",
+      "Detection Value": "0.9123",
       "Operational Significance": "Individual command anomaly detection across multi-step execution"
     },
     {
       "Evaluation Dimension": "Chain-Level Detection Rate",
-      "Observed Count": "60 / 60 Attack Chains",
-      "Detection Rate": "1.0000",
+      "Observed Metric": "60 / 60 Attack Chains",
+      "Detection Value": "1.0000",
       "Operational Significance": "Chains interrupted (>=1 step flagged in window) halting adversary progression"
+    },
+    {
+      "Evaluation Dimension": "Time-to-Detect: Mean Event Delay",
+      "Observed Metric": "0.25 commands elapsed",
+      "Detection Value": "0.25 steps (Median: 0)",
+      "Operational Significance": "Average command progression before detection engine triggers critical alert"
+    },
+    {
+      "Evaluation Dimension": "Earliest Stage Interception",
+      "Observed Metric": "45 / 60 Chains",
+      "Detection Value": "75.0% on Step 0",
+      "Operational Significance": "Attack chains halted at initial reconnaissance/discovery before privilege escalation"
+    },
+    {
+      "Evaluation Dimension": "Time-to-Detect: Mean Wall-Clock Delay",
+      "Observed Metric": "0.80 seconds",
+      "Detection Value": "0.80 sec",
+      "Operational Significance": "Mean elapsed time from first adversary command to alert generation"
     }
   ],
   "experiment2c_per_binary_discrimination": [
     {
       "Target Binary": "find",
-      "Benign Test Count": 24,
+      "Benign Held-Out Count": 24,
       "Attack Test Count": 30,
       "Precision": "1.0000",
       "Recall": "1.0000",
       "F1-Score": "1.0000",
-      "FPR": "0.0000"
+      "Binary FPR": "0.0000"
     },
     {
       "Target Binary": "vim",
-      "Benign Test Count": 27,
+      "Benign Held-Out Count": 27,
       "Attack Test Count": 15,
       "Precision": "1.0000",
       "Recall": "1.0000",
       "F1-Score": "1.0000",
-      "FPR": "0.0000"
+      "Binary FPR": "0.0000"
     },
     {
       "Target Binary": "awk",
-      "Benign Test Count": 28,
+      "Benign Held-Out Count": 28,
       "Attack Test Count": 30,
       "Precision": "1.0000",
       "Recall": "1.0000",
       "F1-Score": "1.0000",
-      "FPR": "0.0000"
+      "Binary FPR": "0.0000"
     },
     {
       "Target Binary": "tar",
-      "Benign Test Count": 28,
+      "Benign Held-Out Count": 28,
       "Attack Test Count": 30,
       "Precision": "1.0000",
       "Recall": "1.0000",
       "F1-Score": "1.0000",
-      "FPR": "0.0000"
+      "Binary FPR": "0.0000"
     },
     {
       "Target Binary": "python3",
-      "Benign Test Count": 26,
+      "Benign Held-Out Count": 26,
       "Attack Test Count": 15,
       "Precision": "1.0000",
       "Recall": "1.0000",
       "F1-Score": "1.0000",
-      "FPR": "0.0000"
+      "Binary FPR": "0.0000"
     },
     {
       "Target Binary": "certutil.exe",
-      "Benign Test Count": 40,
+      "Benign Held-Out Count": 40,
       "Attack Test Count": 45,
       "Precision": "0.9783",
       "Recall": "1.0000",
       "F1-Score": "0.9890",
-      "FPR": "0.0250"
+      "Binary FPR": "0.0250"
     },
     {
       "Target Binary": "powershell.exe",
-      "Benign Test Count": 30,
+      "Benign Held-Out Count": 30,
       "Attack Test Count": 60,
       "Precision": "1.0000",
       "Recall": "1.0000",
       "F1-Score": "1.0000",
-      "FPR": "0.0000"
+      "Binary FPR": "0.0000"
     },
     {
       "Target Binary": "rundll32.exe",
-      "Benign Test Count": 25,
+      "Benign Held-Out Count": 25,
       "Attack Test Count": 30,
       "Precision": "1.0000",
       "Recall": "1.0000",
       "F1-Score": "1.0000",
-      "FPR": "0.0000"
+      "Binary FPR": "0.0000"
     },
     {
       "Target Binary": "regsvr32.exe",
-      "Benign Test Count": 38,
+      "Benign Held-Out Count": 38,
       "Attack Test Count": 30,
       "Precision": "1.0000",
       "Recall": "1.0000",
       "F1-Score": "1.0000",
-      "FPR": "0.0000"
+      "Binary FPR": "0.0000"
     },
     {
       "Target Binary": "mshta.exe",
-      "Benign Test Count": 34,
+      "Benign Held-Out Count": 34,
       "Attack Test Count": 15,
       "Precision": "1.0000",
       "Recall": "1.0000",
       "F1-Score": "1.0000",
-      "FPR": "0.0000"
+      "Binary FPR": "0.0000"
     }
   ],
   "experiment3_supervised_comparison": [
     {
       "Model Architecture": "Isolation Forest (Unsupervised)",
-      "Precision": "0.9524",
-      "Recall": "0.8276",
-      "F1-Score": "0.8856",
-      "FPR": "0.0350",
+      "Precision": "0.9587",
+      "Recall": "0.9080",
+      "F1-Score": "0.9327",
+      "FPR": "0.0331",
       "Evaluation Scope": "Unseen Attack Tiers (Tiers 2 & 3) [0 attack labels in train]"
     },
     {
-      "Model Architecture": "RandomForest (Supervised Benchmark)",
+      "Model Architecture": "RandomForest (SMOTE + Balanced Supervised)",
       "Precision": "1.0000",
-      "Recall": "0.5172",
-      "F1-Score": "0.6818",
+      "Recall": "0.4828",
+      "F1-Score": "0.6512",
       "FPR": "0.0000",
       "Evaluation Scope": "Unseen Attack Tiers (Tiers 2 & 3) [Trained on Tier 1 Overt]"
     },
     {
-      "Model Architecture": "DecisionTree (Supervised Benchmark)",
+      "Model Architecture": "DecisionTree (SMOTE + Balanced Supervised)",
       "Precision": "1.0000",
       "Recall": "0.5172",
       "F1-Score": "0.6818",
@@ -283,5 +333,10 @@
       "MITRE ID": "T1027.010",
       "Confidence": 0.94
     }
-  ]
+  ],
+  "limitations_and_boundary_disclosure": {
+    "synthetic_telemetry": true,
+    "real_production_generalization_status": "Unverified against noisy production environments; evaluated against controlled lab baseline and attack distributions.",
+    "technique_distribution": "Balanced across 10 target binaries; real-world environments exhibit long-tail skewed distributions."
+  }
 }

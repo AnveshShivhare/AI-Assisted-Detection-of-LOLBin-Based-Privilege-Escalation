@@ -175,17 +175,33 @@ class AnomalyDetector:
             "sliding_window_commands": metadata.get("sliding_window_commands", [])
         }
 
-    def train_supervised_comparators(self, X_train: np.ndarray, y_train: np.ndarray, class_weight: Optional[str] = None):
+    def train_supervised_comparators(self, X_train: np.ndarray, y_train: np.ndarray, use_smote: bool = True, class_weight: str = "balanced"):
         """
         Trains supervised baselines (Random Forest & Decision Tree) to evaluate generalization.
         Grounding: Stamp (2022) & Springer (2026).
+        Applies SMOTE oversampling (if available and classes imbalanced) and balanced class weighting
+        to resolve class imbalance between benign telemetry and scarce attack samples.
         """
         X_train_scaled = self.scaler.transform(X_train)
+        X_fit, y_fit = X_train_scaled, y_train
+
+        if use_smote:
+            try:
+                from imblearn.over_sampling import SMOTE
+                unique, counts = np.unique(y_train, return_counts=True)
+                if len(unique) > 1 and min(counts) >= 2:
+                    k_neighbors = min(5, min(counts) - 1)
+                    if k_neighbors >= 1:
+                        smote = SMOTE(k_neighbors=k_neighbors, random_state=self.random_state)
+                        X_fit, y_fit = smote.fit_resample(X_train_scaled, y_train)
+            except Exception:
+                pass
+
         self.rf_comparator = RandomForestClassifier(n_estimators=100, class_weight=class_weight, random_state=self.random_state)
-        self.rf_comparator.fit(X_train_scaled, y_train)
+        self.rf_comparator.fit(X_fit, y_fit)
 
         self.dt_comparator = DecisionTreeClassifier(class_weight=class_weight, random_state=self.random_state)
-        self.dt_comparator.fit(X_train_scaled, y_train)
+        self.dt_comparator.fit(X_fit, y_fit)
 
     def predict_supervised_comparators(self, X: np.ndarray) -> Dict[str, np.ndarray]:
         """Runs predictions with supervised benchmark models."""

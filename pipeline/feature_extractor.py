@@ -146,14 +146,14 @@ class TelemetryFeatureExtractor:
         except Exception:
             return 0.0
 
-    def _compute_isolated_features(self, ev: Dict[str, Any], nlp_components: np.ndarray) -> Dict[str, float]:
+    def _compute_isolated_features(self, ev: Dict[str, Any], nlp_components: np.ndarray, process_tree_depth: float = 1.0) -> Dict[str, float]:
         """Extracts features for an isolated single event."""
         cmd = ev.get("command_line", "") or ""
         p_name = ev.get("parent_process_name", "unknown").lower()
         c_name = ev.get("process_name", "unknown").lower()
         pair = f"{p_name}->{c_name}"
 
-        # 1. Process Lineage Rarity & Lineage Anomaly Score
+        # 1. Process Lineage Rarity, Anomaly Score & Real Ancestral Tree Depth
         proc_count = self.baseline_process_counts.get(c_name, 0)
         pair_count = self.baseline_parent_child_counts.get(pair, 0)
         if proc_count > 0:
@@ -221,6 +221,7 @@ class TelemetryFeatureExtractor:
             "is_windows": is_windows,
             "is_linux": is_linux,
             "lineage_anomaly_score": lineage_anomaly_score,
+            "process_tree_depth": float(process_tree_depth),
             "remote_or_untrusted_path_density": remote_or_untrusted_path_density,
             "inline_scriptlet_protocol_density": inline_scriptlet_protocol_density,
             "pair_rarity": pair_rarity,
@@ -265,46 +266,72 @@ class TelemetryFeatureExtractor:
             nlp_embeddings = np.zeros((len(events), 5))
 
         session_histories = defaultdict(lambda: deque(maxlen=self.window_size))
+        session_pid_trees = defaultdict(dict)
         feature_rows = []
         metadata_list = []
 
         for i, ev in enumerate(events):
             sess_id = ev.get("session_id", "default_sess")
-            iso_feats = self._compute_isolated_features(ev, nlp_embeddings[i])
+            c_name = ev.get("process_name", "unknown").lower()
+            pid = ev.get("process_id", 0)
+            ppid = ev.get("parent_process_id", 0)
+
+            # Maintain session process graph and compute ancestral process tree depth
+            tree = session_pid_trees[sess_id]
+            if pid and ppid:
+                tree[pid] = ppid
+
+            depth = 1
+            curr = ppid
+            visited = {pid}
+            while curr in tree and curr not in visited and depth < 16:
+                visited.add(curr)
+                curr = tree[curr]
+                depth += 1
+            process_tree_depth = float(depth)
+
+            iso_feats = self._compute_isolated_features(ev, nlp_embeddings[i], process_tree_depth=process_tree_depth)
             ts_ms = self._parse_timestamp_ms(ev.get("timestamp", ""))
 
             history = session_histories[sess_id]
 
             if mode == "isolated":
                 row = dict(iso_feats)
-                history.append({**iso_feats, "timestamp_ms": ts_ms})
+                history.append({**iso_feats, "process_name": c_name, "timestamp_ms": ts_ms})
             elif mode == "window":
                 # Sequence-aware ordered transition features computed BEFORE appending current event
                 if len(history) > 0:
-                    # a) Entropy escalation delta: (current - first in window)
-                    first_cmd_entropy = history[0]["entropy"]
-                    entropy_delta = float(iso_feats["entropy"] - first_cmd_entropy)
+                    # a) Step-to-step entropy transition delta: (current - previous in session)
+                    prev_cmd_entropy = history[-1]["entropy"]
+                    entropy_delta = float(iso_feats["entropy"] - prev_cmd_entropy)
 
                     # b) Privilege escalation in window (stepping from unprivileged to elevated)
                     had_unprivileged_earlier = any(h.get("elevated_priv", 0.0) == 0.0 for h in history)
                     current_elevated = (iso_feats.get("elevated_priv", 0.0) == 1.0 or iso_feats.get("priv_transition", 0.0) == 1.0)
                     priv_escalated_in_window = 1.0 if (had_unprivileged_earlier and current_elevated) else 0.0
 
-                    # c) Token acceleration (jump in suspicious token hits)
+                    # c) Token acceleration (step jump in suspicious token hits)
                     prev_token_hits = history[-1]["token_hits"]
                     token_acceleration = float(iso_feats["token_hits"] - prev_token_hits)
 
-                    # d) Inter-event timing delta (ms)
+                    # d) Process binary alternation across execution steps
+                    prev_proc = history[-1].get("process_name", c_name)
+                    binary_changed = 1.0 if (c_name != prev_proc) else 0.0
+
+                    # e) Inter-event timing delta (ms) & burst frequency
                     prev_ts = history[-1].get("timestamp_ms", 0.0)
                     inter_event_delta_ms = max(0.0, float(ts_ms - prev_ts)) if (prev_ts > 0 and ts_ms > 0) else 5000.0
+                    command_burst_frequency = 1000.0 / max(inter_event_delta_ms, 50.0)
                 else:
                     entropy_delta = 0.0
                     priv_escalated_in_window = 0.0
                     token_acceleration = 0.0
+                    binary_changed = 0.0
                     inter_event_delta_ms = 5000.0
+                    command_burst_frequency = 0.2
 
                 # Append current step to session history
-                history.append({**iso_feats, "timestamp_ms": ts_ms})
+                history.append({**iso_feats, "process_name": c_name, "timestamp_ms": ts_ms})
 
                 # Compute sliding window aggregations
                 window_len = len(history)
@@ -346,7 +373,9 @@ class TelemetryFeatureExtractor:
                     "entropy_delta": entropy_delta,
                     "priv_escalated_in_window": priv_escalated_in_window,
                     "token_acceleration": token_acceleration,
-                    "inter_event_delta_ms": inter_event_delta_ms
+                    "binary_changed": binary_changed,
+                    "inter_event_delta_ms": inter_event_delta_ms,
+                    "command_burst_frequency": command_burst_frequency
                 }
             else:
                 raise ValueError(f"Unknown mode: {mode}")
@@ -355,10 +384,16 @@ class TelemetryFeatureExtractor:
             metadata_list.append({
                 "event_id": ev.get("event_id"),
                 "timestamp": ev.get("timestamp"),
+                "source": ev.get("source", "unknown"),
+                "source_provenance": ev.get("source_provenance", "synthetic"),
                 "os_type": ev.get("os_type"),
                 "process_name": ev.get("process_name"),
                 "parent_process_name": ev.get("parent_process_name", "unknown"),
                 "command_line": ev.get("command_line"),
+                "cwd": ev.get("cwd", ""),
+                "syscall": ev.get("syscall", "execve"),
+                "success": ev.get("success", "yes"),
+                "key": ev.get("key", ""),
                 "session_id": sess_id,
                 "label": ev.get("label", "benign"),
                 "tier": ev.get("tier", 0),

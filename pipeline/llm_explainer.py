@@ -139,7 +139,6 @@ class LLMExplainer:
         score = float(payload.get("anomaly_score", 0.5))
         window_cmds = payload.get("sliding_window_commands") or []
         window_text = " ".join(window_cmds).lower()
-        sess_id = (payload.get("session_id") or "").lower()
 
         # 1. Environment-Variable Aliasing & Indirect LOLBin Invocation (MITRE T1027.010)
         # Catches 'set p=certutil&& call %p%', '$env:TEMP', 'IFS=', and dynamic variable aliasing

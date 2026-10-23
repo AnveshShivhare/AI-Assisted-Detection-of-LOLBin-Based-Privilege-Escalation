@@ -25,6 +25,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+from pipeline.telemetry import SyntheticTelemetrySource, AuditdTelemetrySource
 from pipeline.feature_extractor import TelemetryFeatureExtractor
 from pipeline.detector import AnomalyDetector
 from pipeline.llm_explainer import LLMExplainer
@@ -60,11 +61,13 @@ def load_pipeline():
     return extractor, detector, explainer
 
 @st.cache_data
-def load_eval_data():
+def load_eval_data(source_type: str = "synthetic", auditd_path: str = "data/audit.log"):
+    if source_type == "auditd" and os.path.exists(os.path.join(BASE_DIR, auditd_path)):
+        audit_source = AuditdTelemetrySource(os.path.join(BASE_DIR, auditd_path), is_file=True)
+        return list(audit_source.events())
     eval_path = os.path.join(BASE_DIR, "data", "full_evaluation_dataset.json")
     if os.path.exists(eval_path):
-        with open(eval_path) as f:
-            return json.load(f)
+        return list(SyntheticTelemetrySource(eval_path).events())
     return []
 
 @st.cache_data
@@ -75,12 +78,20 @@ def load_eval_summary():
             return json.load(f)
     return None
 
-extractor, detector, explainer = load_pipeline()
-dataset = load_eval_data()
-summary = load_eval_summary()
-
 # Sidebar
 st.sidebar.header("Navigation & Configuration")
+data_source_mode = st.sidebar.selectbox(
+    "Telemetry Adapter Source",
+    ["synthetic", "auditd"],
+    format_func=lambda x: "Synthetic Lab Telemetry (JSON)" if x == "synthetic" else "Real Linux Auditd Logs"
+)
+
+extractor, detector, explainer = load_pipeline()
+dataset = load_eval_data(source_type=data_source_mode)
+summary = load_eval_summary()
+
+provenance_badge = "SYNTHETIC LAB SIMULATION" if data_source_mode == "synthetic" else "REAL LINUX AUDITD LOGS"
+st.sidebar.info(f"**Data Provenance:** {provenance_badge}")
 nav_choice = st.sidebar.radio("View", ["🚨 Live Anomaly Feed & Analysis", "📊 Academic Benchmark Suite", "⚙️ Architecture & Model Specs"])
 
 tier_filter = st.sidebar.multiselect(
