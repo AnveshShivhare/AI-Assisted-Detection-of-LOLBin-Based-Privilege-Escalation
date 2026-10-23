@@ -84,13 +84,16 @@ class AuditdTelemetrySource(TelemetrySource):
     normalized telemetry schema.
     """
 
-    def __init__(self, log_path_or_text: str, host: str = "srv-linux-live", is_file: bool = True):
+    def __init__(self, log_path_or_text: str, host: str = "srv-linux-live", is_file: bool = True, assume_benign: bool = False):
         self.log_path_or_text = log_path_or_text
         self.host = host
         self.is_file = is_file
+        self.assume_benign = assume_benign
 
     @property
     def provenance(self) -> str:
+        if self.assume_benign:
+            return "real_auditd (known-benign baseline assumption)"
         return "real_auditd"
 
     def _parse_timestamp(self, ts_str: str) -> str:
@@ -241,6 +244,10 @@ class AuditdTelemetrySource(TelemetrySource):
             session_num = primary.get("ses", "1")
             session_id = f"audit_ses_{session_num}"
 
+            # Explicit rule: if session is known-benign, set label="benign" explicitly rather than "unknown"
+            label = "benign" if self.assume_benign else "unknown"
+            technique = "Benign Baseline Activity" if self.assume_benign else "Real Ingested Telemetry"
+
             # Assemble normalized event dictionary
             normalized = {
                 "event_id": str(uuid.uuid4()),
@@ -268,9 +275,9 @@ class AuditdTelemetrySource(TelemetrySource):
                 "euid": euid,
                 "integrity_level": "None",
                 "file_touches": file_touches,
-                "label": "unknown",  # Real telemetry is unlabelled prior to detection
+                "label": label,
                 "tier": 0,
-                "technique": "Real Ingested Telemetry",
+                "technique": technique,
                 "mitre_technique_id": "None",
                 "raw_event": "\n".join(raw_logs.get(msg_id, []))
             }

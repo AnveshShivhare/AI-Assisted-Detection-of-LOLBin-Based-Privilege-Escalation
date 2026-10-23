@@ -56,6 +56,15 @@ class TestTelemetrySources(unittest.TestCase):
         self.assertIn("/usr/sbin/ausearch", ev["file_touches"])
         self.assertTrue(ev["timestamp"].startswith("2026-10-23T21:12:31"))
 
+    def test_auditd_assume_benign_flag(self):
+        source = AuditdTelemetrySource(RAW_AUDITD_FIXTURE, is_file=False, assume_benign=True)
+        self.assertEqual(source.provenance, "real_auditd (known-benign baseline assumption)")
+        events = list(source.events())
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["label"], "benign")
+        self.assertEqual(events[0]["technique"], "Benign Baseline Activity")
+        self.assertEqual(events[0]["source_provenance"], "real_auditd (known-benign baseline assumption)")
+
     def test_synthetic_telemetry_source(self):
         sample_event = [{
             "event_id": "test-uuid-1234",
