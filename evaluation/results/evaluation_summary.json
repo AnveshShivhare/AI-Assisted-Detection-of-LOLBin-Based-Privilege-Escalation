@@ -1,0 +1,287 @@
+{
+  "timestamp": "2026-10-23T16:27:13Z",
+  "experiment1_isolated_vs_window": [
+    {
+      "Mode": "Single Isolated Command",
+      "Precision": "1.0000",
+      "Recall": "0.4694",
+      "F1-Score": "0.6389",
+      "FPR": "0.0000",
+      "Latency/Ev (ms)": "0.087",
+      "_raw": {
+        "tp": 345,
+        "fp": 0,
+        "tn": 514,
+        "fn": 390,
+        "precision": 1.0,
+        "recall": 0.46938775510204084,
+        "f1": 0.6388888888888888,
+        "fpr": 0.0
+      }
+    },
+    {
+      "Mode": "Sliding Window (N=3)",
+      "Precision": "0.9735",
+      "Recall": "0.8980",
+      "F1-Score": "0.9342",
+      "FPR": "0.0350",
+      "Latency/Ev (ms)": "0.098",
+      "_raw": {
+        "tp": 660,
+        "fp": 18,
+        "tn": 496,
+        "fn": 75,
+        "precision": 0.9734513274336283,
+        "recall": 0.8979591836734694,
+        "f1": 0.9341825902335457,
+        "fpr": 0.03501945525291829
+      }
+    }
+  ],
+  "experiment2_tiers": [
+    {
+      "Attack Evaluation Tier": "Tier 1: Overt / Isolated GTFOBins & LOLBins",
+      "Attack Events": 300,
+      "Benign Test": 514,
+      "Precision": "0.9434",
+      "Recall": "1.0000",
+      "F1-Score": "0.9709",
+      "FPR": "0.0350",
+      "_raw": {
+        "tp": 300,
+        "fp": 18,
+        "tn": 496,
+        "fn": 0,
+        "precision": 0.9433962264150944,
+        "recall": 1.0,
+        "f1": 0.970873786407767,
+        "fpr": 0.03501945525291829
+      }
+    },
+    {
+      "Attack Evaluation Tier": "Tier 2: Multi-step Chained Sequences",
+      "Attack Events": 285,
+      "Benign Test": 514,
+      "Precision": "0.9302",
+      "Recall": "0.8421",
+      "F1-Score": "0.8840",
+      "FPR": "0.0350",
+      "_raw": {
+        "tp": 240,
+        "fp": 18,
+        "tn": 496,
+        "fn": 45,
+        "precision": 0.9302325581395349,
+        "recall": 0.8421052631578947,
+        "f1": 0.8839779005524862,
+        "fpr": 0.03501945525291829
+      }
+    },
+    {
+      "Attack Evaluation Tier": "Tier 3: Obfuscated / Stealthy (Base64/Ticks/IFS/Aliasing)",
+      "Attack Events": 150,
+      "Benign Test": 514,
+      "Precision": "0.8696",
+      "Recall": "0.8000",
+      "F1-Score": "0.8333",
+      "FPR": "0.0350",
+      "_raw": {
+        "tp": 120,
+        "fp": 18,
+        "tn": 496,
+        "fn": 30,
+        "precision": 0.8695652173913043,
+        "recall": 0.8,
+        "f1": 0.8333333333333333,
+        "fpr": 0.03501945525291829
+      }
+    }
+  ],
+  "experiment2b_chained_sequence_highlight": [
+    {
+      "Evaluation Dimension": "Event-Level Recall",
+      "Observed Count": "240 / 285 Events",
+      "Detection Rate": "0.8421",
+      "Operational Significance": "Individual command anomaly detection across multi-step execution"
+    },
+    {
+      "Evaluation Dimension": "Chain-Level Detection Rate",
+      "Observed Count": "60 / 60 Attack Chains",
+      "Detection Rate": "1.0000",
+      "Operational Significance": "Chains interrupted (>=1 step flagged in window) halting adversary progression"
+    }
+  ],
+  "experiment2c_per_binary_discrimination": [
+    {
+      "Target Binary": "find",
+      "Benign Test Count": 24,
+      "Attack Test Count": 30,
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000"
+    },
+    {
+      "Target Binary": "vim",
+      "Benign Test Count": 27,
+      "Attack Test Count": 15,
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000"
+    },
+    {
+      "Target Binary": "awk",
+      "Benign Test Count": 28,
+      "Attack Test Count": 30,
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000"
+    },
+    {
+      "Target Binary": "tar",
+      "Benign Test Count": 28,
+      "Attack Test Count": 30,
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000"
+    },
+    {
+      "Target Binary": "python3",
+      "Benign Test Count": 26,
+      "Attack Test Count": 15,
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000"
+    },
+    {
+      "Target Binary": "certutil.exe",
+      "Benign Test Count": 40,
+      "Attack Test Count": 45,
+      "Precision": "0.9783",
+      "Recall": "1.0000",
+      "F1-Score": "0.9890",
+      "FPR": "0.0250"
+    },
+    {
+      "Target Binary": "powershell.exe",
+      "Benign Test Count": 30,
+      "Attack Test Count": 60,
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000"
+    },
+    {
+      "Target Binary": "rundll32.exe",
+      "Benign Test Count": 25,
+      "Attack Test Count": 30,
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000"
+    },
+    {
+      "Target Binary": "regsvr32.exe",
+      "Benign Test Count": 38,
+      "Attack Test Count": 30,
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000"
+    },
+    {
+      "Target Binary": "mshta.exe",
+      "Benign Test Count": 34,
+      "Attack Test Count": 15,
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000"
+    }
+  ],
+  "experiment3_supervised_comparison": [
+    {
+      "Model Architecture": "Isolation Forest (Unsupervised)",
+      "Precision": "0.9524",
+      "Recall": "0.8276",
+      "F1-Score": "0.8856",
+      "FPR": "0.0350",
+      "Evaluation Scope": "Unseen Attack Tiers (Tiers 2 & 3) [0 attack labels in train]"
+    },
+    {
+      "Model Architecture": "RandomForest (Supervised Benchmark)",
+      "Precision": "1.0000",
+      "Recall": "0.5172",
+      "F1-Score": "0.6818",
+      "FPR": "0.0000",
+      "Evaluation Scope": "Unseen Attack Tiers (Tiers 2 & 3) [Trained on Tier 1 Overt]"
+    },
+    {
+      "Model Architecture": "DecisionTree (Supervised Benchmark)",
+      "Precision": "1.0000",
+      "Recall": "0.5172",
+      "F1-Score": "0.6818",
+      "FPR": "0.0000",
+      "Evaluation Scope": "Unseen Attack Tiers (Tiers 2 & 3) [Trained on Tier 1 Overt]"
+    },
+    {
+      "Model Architecture": "RandomForest (Supervised - Seen Tier 1 Baseline)",
+      "Precision": "1.0000",
+      "Recall": "1.0000",
+      "F1-Score": "1.0000",
+      "FPR": "0.0000",
+      "Evaluation Scope": "Seen Attack Partition (Tier 1 Overt Test)"
+    }
+  ],
+  "experiment4_llm_attribution_sample": [
+    {
+      "Process": "find",
+      "Command Sample": "sudo find . -exec /bin/sh -p \\; -quit",
+      "Ground Truth Technique": "Sudo GTFOBins (find) Abuse",
+      "LLM Verdict": "Malicious - PrivEsc/LOLBin",
+      "Attributed Technique": "GTFOBins Sudo Abuse (find -exec)",
+      "MITRE ID": "T1548.003",
+      "Confidence": 0.95
+    },
+    {
+      "Process": "certutil.exe",
+      "Command Sample": "certutil.exe -urlcache -split -f http://10.0....",
+      "Ground Truth Technique": "Certutil Ingress Tool Transfer",
+      "LLM Verdict": "Malicious - PrivEsc/LOLBin",
+      "Attributed Technique": "Certutil Ingress Tool Transfer",
+      "MITRE ID": "T1105",
+      "Confidence": 0.97
+    },
+    {
+      "Process": "whoami",
+      "Command Sample": "whoami && id",
+      "Ground Truth Technique": "Chained Sequence: Discovery",
+      "LLM Verdict": "Malicious - Chained PrivEsc/LOLBin Sequence",
+      "Attributed Technique": "Chained Discovery & Privilege Escalation Sequence",
+      "MITRE ID": "T1059 / T1087",
+      "Confidence": 0.92
+    },
+    {
+      "Process": "powershell.exe",
+      "Command Sample": "powershell.exe -e JABjACAAPQAgAE4AZQB3AC0ATwB...",
+      "Ground Truth Technique": "Obfuscated Base64 PowerShell Download",
+      "LLM Verdict": "Malicious - PrivEsc/LOLBin",
+      "Attributed Technique": "Obfuscated / Base64 Encoded Command Execution",
+      "MITRE ID": "T1059.001 / T1027",
+      "Confidence": 0.96
+    },
+    {
+      "Process": "cmd.exe",
+      "Command Sample": "cmd.exe /c \"set p=certutil&& call %p% -dump c...",
+      "Ground Truth Technique": "Subtle Env-Var LOLBin Aliasing",
+      "LLM Verdict": "Malicious - Obfuscated LOLBin Aliasing",
+      "Attributed Technique": "Obfuscated LOLBin Aliasing via Environment Variables (certutil)",
+      "MITRE ID": "T1027.010",
+      "Confidence": 0.94
+    }
+  ]
+}

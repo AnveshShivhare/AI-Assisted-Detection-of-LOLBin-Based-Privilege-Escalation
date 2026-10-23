@@ -1,0 +1,139 @@
+<!--
+==============================================================================
+WAZUH CUSTOM RULES & DECODERS: local_rules.xml
+Project: AI-Assisted PrivEsc & LOLBin Detection Pipeline
+Host: EDR Lab Manager (Linux auditd & Windows Sysmon Integrations)
+
+Maps endpoint telemetry alerts to AI Anomaly Detection Pipeline & Active-Response.
+==============================================================================
+-->
+
+<group name="privesc,lolbins,linux_gtfobins,windows_lolbins,">
+
+  <!-- ===================================================================== -->
+  <!-- 1. LINUX GTFOBINS & PRIVILEGE ESCALATION RULES (auditd / Wazuh)       -->
+  <!-- ===================================================================== -->
+
+  <!-- Sudoers File Direct Modification -->
+  <rule id="100100" level="12">
+    <if_group>syscheck</if_group>
+    <match>/etc/sudoers|/etc/sudoers.d</match>
+    <description>AI-EDR: Integrity modification detected on /etc/sudoers file</description>
+    <mitre>
+      <id>T1548.003</id>
+    </mitre>
+    <group>privesc,sudo_modification,</group>
+  </rule>
+
+  <!-- GTFOBins Sudo Abuse (find -exec, vim, awk, tar checkpoint) -->
+  <rule id="100101" level="10">
+    <if_sid>80700</if_sid>
+    <match>sudo.*find.*-exec|sudo.*vim.*:!|sudo.*awk.*system\(|sudo.*python.*pty\.spawn|tar.*checkpoint-action=exec</match>
+    <description>AI-EDR: GTFOBins Privilege Escalation Pattern Detected via Sudo/Auditd</description>
+    <mitre>
+      <id>T1548.003</id>
+      <id>T1059.004</id>
+    </mitre>
+    <group>gtfobins,privesc,</group>
+  </rule>
+
+  <!-- SUID Binary Execution / Shell Elevation -->
+  <rule id="100102" level="9">
+    <if_sid>80700</if_sid>
+    <match>euid=0.*uid=1000.*comm="sh"|euid=0.*uid=1000.*comm="bash"</match>
+    <description>AI-EDR: EUID Elevation Transition (Non-root user spawned root shell)</description>
+    <mitre>
+      <id>T1548.001</id>
+    </mitre>
+    <group>suid_elevation,privesc,</group>
+  </rule>
+
+  <!-- ===================================================================== -->
+  <!-- 2. WINDOWS LOLBIN RULES (Sysmon Event ID 1: Process Creation)         -->
+  <!-- ===================================================================== -->
+
+  <!-- Certutil Ingress Tool Transfer (Barr-Smith et al. 2021) -->
+  <rule id="100201" level="10">
+    <if_sid>60103</if_sid>
+    <field name="win.eventdata.image">certutil\.exe</field>
+    <field name="win.eventdata.commandLine">-urlcache|-split</field>
+    <description>AI-EDR: Certutil Living-off-the-Land Ingress Tool Transfer (Download)</description>
+    <mitre>
+      <id>T1105</id>
+    </mitre>
+    <group>lolbin,ingress_transfer,</group>
+  </rule>
+
+  <!-- Mshta Arbitrary Scriptlet Execution -->
+  <rule id="100202" level="11">
+    <if_sid>60103</if_sid>
+    <field name="win.eventdata.image">mshta\.exe</field>
+    <field name="win.eventdata.commandLine">javascript:|vbscript:|http</field>
+    <description>AI-EDR: Mshta Inline Scriptlet / Remote Code Execution Detected</description>
+    <mitre>
+      <id>T1218.005</id>
+    </mitre>
+    <group>lolbin,mshta,</group>
+  </rule>
+
+  <!-- Regsvr32 Squiblydoo Scriptlet -->
+  <rule id="100203" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.eventdata.image">regsvr32\.exe</field>
+    <field name="win.eventdata.commandLine">scrobj\.dll|/i:http</field>
+    <description>AI-EDR: Regsvr32 Squiblydoo Application Whitelisting Bypass Detected</description>
+    <mitre>
+      <id>T1218.010</id>
+    </mitre>
+    <group>lolbin,regsvr32,</group>
+  </rule>
+
+  <!-- WMIC Remote / Inline Process Creation -->
+  <rule id="100204" level="9">
+    <if_sid>60103</if_sid>
+    <field name="win.eventdata.image">wmic\.exe</field>
+    <field name="win.eventdata.commandLine">process call create</field>
+    <description>AI-EDR: WMIC Process Spawning Invocation</description>
+    <mitre>
+      <id>T1047</id>
+    </mitre>
+    <group>lolbin,wmic,</group>
+  </rule>
+
+  <!-- BITSAdmin Ingress Download -->
+  <rule id="100205" level="9">
+    <if_sid>60103</if_sid>
+    <field name="win.eventdata.image">bitsadmin\.exe</field>
+    <field name="win.eventdata.commandLine">/transfer|/download</field>
+    <description>AI-EDR: BITSAdmin Background Download Transfer Job</description>
+    <mitre>
+      <id>T1197</id>
+    </mitre>
+    <group>lolbin,bitsadmin,</group>
+  </rule>
+
+  <!-- Unquoted Service Path / Service Config Hijack (sc.exe) -->
+  <rule id="100206" level="11">
+    <if_sid>60103</if_sid>
+    <field name="win.eventdata.image">sc\.exe</field>
+    <field name="win.eventdata.commandLine">binPath=</field>
+    <description>AI-EDR: Windows Service Binary Path (binPath) Modification via sc.exe</description>
+    <mitre>
+      <id>T1543.003</id>
+    </mitre>
+    <group>privesc,service_hijack,</group>
+  </rule>
+
+  <!-- SAM Hive Registry Dump -->
+  <rule id="100207" level="13">
+    <if_sid>60103</if_sid>
+    <field name="win.eventdata.image">reg\.exe</field>
+    <field name="win.eventdata.commandLine">save.*hklm\\sam|save.*hklm\\system</field>
+    <description>AI-EDR: Local SAM / SYSTEM Hive Dumping Detected</description>
+    <mitre>
+      <id>T1003.002</id>
+    </mitre>
+    <group>credential_access,sam_dump,</group>
+  </rule>
+
+</group>
