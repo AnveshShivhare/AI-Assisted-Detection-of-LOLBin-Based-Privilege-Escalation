@@ -14,3 +14,7 @@ GEMINI.md
 AGENTS.md
 GEMINI.md
 .agents/
+presentation/
+scripts/
+*.pptx
+*.xlsx
