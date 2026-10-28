@@ -1,4 +1,4 @@
-# M.Tech Major Project Proposal
+# M.Tech Minor Project Proposal
 
 ## 1. Project Identification
 * **Project Title:** AI-Assisted Privilege Escalation & Living-off-the-Land (LOLBin) Attempt Detection via Endpoint Telemetry and LLM Explainability
@@ -48,13 +48,3 @@ All attack simulation and telemetry generation are strictly conducted within iso
 5. **Academic Documentation:** Formal System Architecture, Grounding Literature Review, and scientific limitations disclosure.
 
 ---
-
-## 6. Milestones & Work Plan
-```text
-[Weeks 1 - 2]  Lab VM setup, telemetry schema design, and baseline generation
-[Weeks 3 - 4]  Feature extraction engine & sliding command window modeling
-[Weeks 5 - 6]  Isolation Forest training, hyperparameter tuning, & thresholding
-[Weeks 7 - 8]  Zero-shot LLM explainability prompt engineering & offline engine
-[Weeks 9 - 10] Comprehensive benchmarking across Tiers 1-3 & ablation studies
-[Weeks 11 - 12] Final dissertation writing, dashboard integration, & code release
-```
