@@ -11,3 +11,6 @@ __pycache__/
 .env
 AGENTS.md
 GEMINI.md
+AGENTS.md
+GEMINI.md
+.agents/
