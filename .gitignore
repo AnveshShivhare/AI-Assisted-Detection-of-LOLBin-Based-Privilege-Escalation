@@ -4,3 +4,10 @@ __pycache__/
 .pytest_cache/
 *.swp
 *.swo
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+AGENTS.md
+GEMINI.md

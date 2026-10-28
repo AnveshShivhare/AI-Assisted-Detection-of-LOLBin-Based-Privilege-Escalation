@@ -47,6 +47,7 @@ class AnomalyDetector:
         # Optional supervised comparators
         self.rf_comparator: Optional[RandomForestClassifier] = None
         self.dt_comparator: Optional[DecisionTreeClassifier] = None
+        self.feature_extractor: Optional[Any] = None
 
     def fit_unsupervised(self, X_benign: np.ndarray, feature_names: List[str]):
         """
@@ -213,9 +214,20 @@ class AnomalyDetector:
             results["DecisionTree"] = self.dt_comparator.predict(X_scaled)
         return results
 
-    def save(self, filepath: str):
+    def save(self, filepath: str, feature_extractor: Optional[Any] = None):
+        """
+        Saves a single unified pipeline bundle containing:
+          - IsolationForest estimator & OS-calibrated thresholds
+          - StandardScaler (fitted on benign baseline)
+          - TelemetryFeatureExtractor (fitted process/pair lineage counts, TfidfVectorizer, TruncatedSVD)
+          - Supervised benchmark comparators (if trained)
+        Enables fresh standalone inference processes to score new telemetry with zero refitting.
+        """
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        joblib.dump({
+        extractor_to_save = feature_extractor or getattr(self, "feature_extractor", None)
+        extractor_state = extractor_to_save.get_state() if (extractor_to_save is not None and hasattr(extractor_to_save, "get_state")) else None
+
+        bundle = {
             "isolation_forest": self.isolation_forest,
             "scaler": self.scaler,
             "feature_names": self.feature_names,
@@ -226,10 +238,14 @@ class AnomalyDetector:
             "os_score_stds": self.os_score_stds,
             "global_threshold": self.global_threshold,
             "rf_comparator": self.rf_comparator,
-            "dt_comparator": self.dt_comparator
-        }, filepath)
+            "dt_comparator": self.dt_comparator,
+            "feature_extractor": extractor_to_save,
+            "feature_extractor_state": extractor_state
+        }
+        joblib.dump(bundle, filepath)
 
     def load(self, filepath: str):
+        """Loads unified pipeline bundle and restores estimator and feature extractor states."""
         data = joblib.load(filepath)
         self.isolation_forest = data["isolation_forest"]
         self.scaler = data["scaler"]
@@ -242,5 +258,27 @@ class AnomalyDetector:
         self.global_threshold = data.get("global_threshold", 0.0)
         self.rf_comparator = data.get("rf_comparator")
         self.dt_comparator = data.get("dt_comparator")
+
+        # Restore feature extractor if present in bundle
+        if "feature_extractor" in data and data["feature_extractor"] is not None:
+            self.feature_extractor = data["feature_extractor"]
+        elif "feature_extractor_state" in data and data["feature_extractor_state"] is not None:
+            from pipeline.feature_extractor import TelemetryFeatureExtractor
+            self.feature_extractor = TelemetryFeatureExtractor()
+            self.feature_extractor.set_state(data["feature_extractor_state"])
+        else:
+            self.feature_extractor = None
+
         self.is_fitted = True
         return self
+
+
+def load_pipeline_bundle(filepath: str) -> Tuple[AnomalyDetector, Optional[Any]]:
+    """
+    Loads the unified pipeline bundle from disk.
+    Returns:
+      (detector, feature_extractor) ready for standalone inference without refitting.
+    """
+    detector = AnomalyDetector()
+    detector.load(filepath)
+    return detector, detector.feature_extractor

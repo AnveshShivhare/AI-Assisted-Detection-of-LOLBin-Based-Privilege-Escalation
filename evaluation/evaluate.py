@@ -42,7 +42,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from pipeline.telemetry import SyntheticTelemetrySource, AuditdTelemetrySource
+from pipeline.telemetry import SyntheticTelemetrySource, AuditdTelemetrySource, SysmonTelemetrySource
 from pipeline.feature_extractor import TelemetryFeatureExtractor
 from pipeline.detector import AnomalyDetector
 from pipeline.llm_explainer import LLMExplainer
@@ -74,7 +74,7 @@ def parse_iso_timestamp(ts_str: str) -> float:
     except Exception:
         return 0.0
 
-def run_evaluation(data_dir: str = "data", results_dir: str = "evaluation/results", source_type: str = "synthetic", auditd_log: str = "data/audit.log", assume_benign: bool = True):
+def run_evaluation(data_dir: str = "data", results_dir: str = "evaluation/results", source_type: str = "synthetic", auditd_log: str = "data/audit.log", sysmon_log: str = "data/sysmon.json", assume_benign: bool = True):
     os.makedirs(results_dir, exist_ok=True)
     print("=" * 80)
     print("AI-Assisted PrivEsc & LOLBin Detection - Academic Evaluation Suite")
@@ -107,6 +107,18 @@ def run_evaluation(data_dir: str = "data", results_dir: str = "evaluation/result
             provenance_badge = "REAL LINUX AUDITD LOG TELEMETRY (known-benign baseline assumption)"
         else:
             provenance_badge = "REAL LINUX AUDITD LOG TELEMETRY"
+    elif source_type == "sysmon":
+        print(f"[*] Ingesting Windows Sysmon log from {sysmon_log}...")
+        sysmon_source = SysmonTelemetrySource(sysmon_log, is_file=True, assume_benign=assume_benign)
+        all_sysmon_events = list(sysmon_source.events())
+        benign_events = [ev for ev in all_sysmon_events if ev.get("label") == "benign"]
+        t1_events = [ev for ev in all_sysmon_events if ev.get("tier") == 1]
+        t2_events = [ev for ev in all_sysmon_events if ev.get("tier") == 2]
+        t3_events = [ev for ev in all_sysmon_events if ev.get("tier") == 3]
+        if assume_benign:
+            provenance_badge = "WINDOWS SYSMON LOG TELEMETRY (known-benign baseline assumption)"
+        else:
+            provenance_badge = "WINDOWS SYSMON LOG TELEMETRY"
     else:
         raise ValueError(f"Unknown source type: {source_type}")
 
@@ -228,10 +240,10 @@ def run_evaluation(data_dir: str = "data", results_dir: str = "evaluation/result
     best_detector = AnomalyDetector(contamination=0.025, n_estimators=150)
     best_detector.fit_unsupervised(X_train_win, f_names_win)
 
-    # Save trained detector for production pipeline use
+    # Save trained detector & feature extractor bundle for production pipeline use
     model_save_path = os.path.join("pipeline", "detector_model.joblib")
-    best_detector.save(model_save_path)
-    print(f"[+] Saved trained Isolation Forest pipeline model to {model_save_path}")
+    best_detector.save(model_save_path, feature_extractor=best_extractor)
+    print(f"[+] Saved trained Isolation Forest and Feature Extractor pipeline bundle to {model_save_path}")
 
     # Evaluate overall benign FPR & score distribution on entire held-out benign test set
     X_b_full, _, meta_b_full = best_extractor.transform(benign_test, mode="window")
@@ -587,13 +599,24 @@ def run_evaluation(data_dir: str = "data", results_dir: str = "evaluation/result
         for ev in (t1_events + t2_events + t3_events + benign_test):
             all_events_map[ev.get("session_id", "")].append(ev.get("command_line", ""))
 
-        sample_configs = [
-            ("Tier 1: Overt / Isolated GTFOBins & LOLBins", [i for i, ev in enumerate(t1_events) if "find" in ev["process_name"]][0], t1_events[[i for i, ev in enumerate(t1_events) if "find" in ev["process_name"]][0]]),
-            ("Tier 1: Overt / Isolated GTFOBins & LOLBins", [i for i, ev in enumerate(t1_events) if "certutil" in ev["process_name"]][0], t1_events[[i for i, ev in enumerate(t1_events) if "certutil" in ev["process_name"]][0]]),
-            ("Tier 2: Multi-step Chained Sequences", 0, t2_events[0]),
-            ("Tier 3: Obfuscated / Stealthy (Base64/Ticks/IFS/Aliasing)", 0, t3_events[0]),
-            ("Tier 3: Obfuscated / Stealthy (Base64/Ticks/IFS/Aliasing)", [i for i, ev in enumerate(t3_events) if "set p=certutil" in ev.get("command_line", "").lower()][0], t3_events[[i for i, ev in enumerate(t3_events) if "set p=certutil" in ev.get("command_line", "").lower()][0]])
-        ]
+        sample_configs = []
+        find_idx = [i for i, ev in enumerate(t1_events) if "find" in ev.get("process_name", "")]
+        if find_idx:
+            sample_configs.append(("Tier 1: Overt / Isolated GTFOBins & LOLBins", find_idx[0], t1_events[find_idx[0]]))
+        cert_idx = [i for i, ev in enumerate(t1_events) if "certutil" in ev.get("process_name", "")]
+        if cert_idx:
+            sample_configs.append(("Tier 1: Overt / Isolated GTFOBins & LOLBins", cert_idx[0], t1_events[cert_idx[0]]))
+        elif t1_events and not find_idx:
+            sample_configs.append(("Tier 1: Overt / Isolated GTFOBins & LOLBins", 0, t1_events[0]))
+
+        if t2_events:
+            sample_configs.append(("Tier 2: Multi-step Chained Sequences", 0, t2_events[0]))
+
+        if t3_events:
+            sample_configs.append(("Tier 3: Obfuscated / Stealthy (Base64/Ticks/IFS/Aliasing)", 0, t3_events[0]))
+            alias_idx = [i for i, ev in enumerate(t3_events) if "set p=certutil" in ev.get("command_line", "").lower()]
+            if alias_idx:
+                sample_configs.append(("Tier 3: Obfuscated / Stealthy (Base64/Ticks/IFS/Aliasing)", alias_idx[0], t3_events[alias_idx[0]]))
 
         for tier_name, s_idx, sample in sample_configs:
             # Determine offset for the tier's combined evaluation
@@ -635,21 +658,25 @@ def run_evaluation(data_dir: str = "data", results_dir: str = "evaluation/result
         print(tabulate(llm_reports, headers="keys", tablefmt="fancy_grid"))
 
         # Print sample SOC Explanations
-        print("\n[*] Sample Plain-English SOC Explanation Output (Ali & Kostakos 2023):")
-        print("    [Sample A: Chained Sequence Discovery (whoami && id)]")
-        print(f"    Command: {saved_payloads[2]['command_line']}")
-        print(f"    Sliding Window Context: {saved_payloads[2].get('sliding_window_commands')}")
-        print(f"    Verdict: {saved_explanations[2].get('verdict')}")
-        print(f"    Technique: {saved_explanations[2].get('attributed_technique')} ({saved_explanations[2].get('mitre_id')})")
-        print(f"    Confidence: {saved_explanations[2].get('confidence_score')}")
-        print(f"    Analyst Explanation: {saved_explanations[2].get('plain_english_explanation')}\n")
+        if len(saved_payloads) > 0:
+            idx_a = min(2, len(saved_payloads) - 1)
+            print("\n[*] Sample Plain-English SOC Explanation Output (Ali & Kostakos 2023):")
+            print(f"    [Sample A: {saved_payloads[idx_a].get('process_name')}]")
+            print(f"    Command: {saved_payloads[idx_a]['command_line']}")
+            print(f"    Sliding Window Context: {saved_payloads[idx_a].get('sliding_window_commands')}")
+            print(f"    Verdict: {saved_explanations[idx_a].get('verdict')}")
+            print(f"    Technique: {saved_explanations[idx_a].get('attributed_technique')} ({saved_explanations[idx_a].get('mitre_id')})")
+            print(f"    Confidence: {saved_explanations[idx_a].get('confidence_score')}")
+            print(f"    Analyst Explanation: {saved_explanations[idx_a].get('plain_english_explanation')}\n")
 
-        print("    [Sample B: Subtle Env-Var LOLBin Aliasing (cmd.exe / set p=certutil)]")
-        print(f"    Command: {saved_payloads[4]['command_line']}")
-        print(f"    Verdict: {saved_explanations[4].get('verdict')}")
-        print(f"    Technique: {saved_explanations[4].get('attributed_technique')} ({saved_explanations[4].get('mitre_id')})")
-        print(f"    Confidence: {saved_explanations[4].get('confidence_score')}")
-        print(f"    Analyst Explanation: {saved_explanations[4].get('plain_english_explanation')}")
+        if len(saved_payloads) > 1:
+            idx_b = min(4, len(saved_payloads) - 1)
+            print(f"    [Sample B: {saved_payloads[idx_b].get('process_name')}]")
+            print(f"    Command: {saved_payloads[idx_b]['command_line']}")
+            print(f"    Verdict: {saved_explanations[idx_b].get('verdict')}")
+            print(f"    Technique: {saved_explanations[idx_b].get('attributed_technique')} ({saved_explanations[idx_b].get('mitre_id')})")
+            print(f"    Confidence: {saved_explanations[idx_b].get('confidence_score')}")
+            print(f"    Analyst Explanation: {saved_explanations[idx_b].get('plain_english_explanation')}")
     else:
         # Explain top outlier in held-out benign test
         top_idx = int(np.argmax(scores_b_full)) if len(scores_b_full) > 0 else 0
@@ -833,12 +860,13 @@ def run_evaluation(data_dir: str = "data", results_dir: str = "evaluation/result
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AI-Assisted PrivEsc & LOLBin Detection Evaluation Suite")
-    parser.add_argument("--source", choices=["synthetic", "auditd"], default="synthetic", help="Telemetry data source adapter (default: synthetic)")
+    parser.add_argument("--source", choices=["synthetic", "auditd", "sysmon"], default="synthetic", help="Telemetry data source adapter (default: synthetic)")
     parser.add_argument("--data-dir", default="data", help="Path to telemetry data directory (default: data)")
     parser.add_argument("--results-dir", default="evaluation/results", help="Path to results directory (default: evaluation/results)")
     parser.add_argument("--auditd-log", default="data/audit.log", help="Path to real auditd log file when --source=auditd")
-    parser.add_argument("--assume-benign", action="store_true", default=True, help="Assume ingested auditd log is clean benign baseline if unlabeled (default: True)")
-    parser.add_argument("--no-assume-benign", dest="assume_benign", action="store_false", help="Do not assume benign baseline; keep unlabeled auditd as unknown")
+    parser.add_argument("--sysmon-log", default="data/sysmon.json", help="Path to Sysmon log file when --source=sysmon")
+    parser.add_argument("--assume-benign", action="store_true", default=True, help="Assume ingested log is clean benign baseline if unlabeled (default: True)")
+    parser.add_argument("--no-assume-benign", dest="assume_benign", action="store_false", help="Do not assume benign baseline; keep unlabeled telemetry as unknown")
 
     # Compatibility with positional args
     if len(sys.argv) > 1 and not sys.argv[1].startswith("--"):
@@ -847,4 +875,4 @@ if __name__ == "__main__":
         run_evaluation(data_dir=data_arg, results_dir=res_arg, source_type="synthetic")
     else:
         args = parser.parse_args()
-        run_evaluation(data_dir=args.data_dir, results_dir=args.results_dir, source_type=args.source, auditd_log=args.auditd_log, assume_benign=args.assume_benign)
+        run_evaluation(data_dir=args.data_dir, results_dir=args.results_dir, source_type=args.source, auditd_log=args.auditd_log, sysmon_log=args.sysmon_log, assume_benign=args.assume_benign)

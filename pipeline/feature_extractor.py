@@ -136,6 +136,34 @@ class TelemetryFeatureExtractor:
         self.is_fitted = True
         return self
 
+    def get_state(self) -> Dict[str, Any]:
+        """Returns a serializable dictionary containing all fitted state."""
+        return {
+            "window_size": self.window_size,
+            "baseline_parent_child_counts": dict(self.baseline_parent_child_counts),
+            "baseline_process_counts": dict(self.baseline_process_counts),
+            "total_baseline_events": self.total_baseline_events,
+            "is_fitted": self.is_fitted,
+            "feature_names": self.feature_names,
+            "tfidf": self.tfidf if self.nlp_fitted else None,
+            "svd": self.svd if self.nlp_fitted else None,
+            "nlp_fitted": self.nlp_fitted
+        }
+
+    def set_state(self, state: Dict[str, Any]):
+        """Restores fitted state from a dictionary without refitting."""
+        self.window_size = state.get("window_size", 3)
+        self.baseline_parent_child_counts = defaultdict(int, state.get("baseline_parent_child_counts", {}))
+        self.baseline_process_counts = defaultdict(int, state.get("baseline_process_counts", {}))
+        self.total_baseline_events = state.get("total_baseline_events", 0)
+        self.is_fitted = state.get("is_fitted", True)
+        self.feature_names = state.get("feature_names", [])
+        self.nlp_fitted = state.get("nlp_fitted", False)
+        if self.nlp_fitted and state.get("tfidf") is not None:
+            self.tfidf = state["tfidf"]
+            self.svd = state["svd"]
+        return self
+
     def _parse_timestamp_ms(self, ts_str: str) -> float:
         """Parses ISO timestamp into epoch milliseconds."""
         if not ts_str:
@@ -266,6 +294,7 @@ class TelemetryFeatureExtractor:
             nlp_embeddings = np.zeros((len(events), 5))
 
         session_histories = defaultdict(lambda: deque(maxlen=self.window_size))
+        session_cmd_histories = defaultdict(lambda: deque(maxlen=self.window_size))
         session_pid_trees = defaultdict(dict)
         feature_rows = []
         metadata_list = []
@@ -294,6 +323,9 @@ class TelemetryFeatureExtractor:
             ts_ms = self._parse_timestamp_ms(ev.get("timestamp", ""))
 
             history = session_histories[sess_id]
+            prev_window_cmds = list(session_cmd_histories[sess_id])
+            cmd_str = str(ev.get("command_line", "") or "")
+            session_cmd_histories[sess_id].append(cmd_str)
 
             if mode == "isolated":
                 row = dict(iso_feats)
@@ -399,6 +431,7 @@ class TelemetryFeatureExtractor:
                 "tier": ev.get("tier", 0),
                 "technique": ev.get("technique", "Unknown"),
                 "mitre_technique_id": ev.get("mitre_technique_id", "None"),
+                "sliding_window_commands": prev_window_cmds,
                 "raw_event": ev.get("raw_event", "")
             })
 
